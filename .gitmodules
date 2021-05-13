@@ -81,3 +81,6 @@
 	path = src/libkmip
 	url = https://github.com/ceph/libkmip
 	branch = ceph-master
+[submodule "src/arrow"]
+	path = src/arrow
+	url = https://github.com/apache/arrow
