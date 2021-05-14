@@ -746,6 +746,45 @@ endif()
 
 add_subdirectory(crypto)
 
+include(ExternalProject)
+
+option(WITH_ARROW "Add in Apache Arrow" OFF)
+option(WITH_ARROW_FLIGHT "Add in Apache Arrow Flight" OFF)
+
+if (WITH_ARROW OR WITH_ARROW_FLIGHT)
+  if(FALSE)
+    set(ARROW_CSV ON CACHE BOOL "")
+    set(ARROW_WITH_ZLIB ON CACHE BOOL "")
+    set(ARROW_WITH_RE2 ON CACHE BOOL "")
+    set(ARROW_WITH_ZLIB OFF CACHE BOOL "interferes with ceph's")
+    set(ARROW_DEPENDENCY_SOURCE BUNDLED CACHE STRING "")
+    set(ARROW_SIMD_LEVEL NONE CACHE STRING "")
+
+    if (WITH_ARROW_FLIGHT)
+      set(ARROW_FLIGHT ON CACHE BOOL "")
+    endif()
+  endif(FALSE)
+
+  # needed since arrow also defines "ctags" target
+  # set(ALLOW_DUPLICATE_CUSTOM_TARGETS TRUE CACHE BOOL "")
+
+  # add_subdirectory(arrow/cpp)
+  ExternalProject_Add("arrow"
+    PREFIX arrow/cpp
+    SOURCE_DIR arrow/cpp
+    DOWNLOAD_COMMAND "" # disable
+    INSTALL_COMMAND "" # disable
+    # PREFIX_DIR "src/arrow/cpp"
+    CMAKE_ARGS
+      "-DCMAKE_BUILD_TYPE=release"
+      "-DARROW_CSV=ON"
+      "-DARROW_WITH_ZLIB=ON"
+      "-DARROW_WITH_RE2=ON"
+      "-DARROW_DEPENDENCY_SOURCE=BUNDLED"
+      "-DARROW_SIMD_LEVEL=NONE"
+      "-DARROW_FLIGHT=ON")
+endif()
+
 if(WITH_TESTS)
   install(PROGRAMS
     ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ceph-debugpack
