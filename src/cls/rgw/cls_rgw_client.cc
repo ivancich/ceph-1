@@ -8,6 +8,8 @@
 
 #include "common/debug.h"
 
+#define dout_subsys ceph_subsys_rgw
+
 using std::list;
 using std::map;
 using std::pair;
@@ -24,10 +26,12 @@ const string BucketIndexShardsManager::SHARDS_SEPARATOR = ",";
 
 int CLSRGWConcurrentIO::operator()() {
   CephContext* dout = (CephContext*)io_ctx.cct();
+  ldout(dout, 0) << "ERIC " << __func__ << " entering, objs_container.size=" << objs_container.size() << dendl;
 
   int ret = 0;
   iter = objs_container.begin();
   for (; iter != objs_container.end() && max_aio-- > 0; ++iter) {
+    ldout(dout, 0) << "ERIC " << __func__ << " issue_op " << iter->first << " / " << iter->second << dendl;
     ret = issue_op(iter->first, iter->second);
     if (ret < 0)
       break;
@@ -53,12 +57,17 @@ int CLSRGWConcurrentIO::operator()() {
 
     // if we're at the end with this round, see if another round is needed
     if (iter == objs_container.end()) {
+      ldout(dout, 0) << "ERIC " << __func__ <<
+	" reached end of objs_container; completed_objs.size=" << completed_objs.size() <<
+	" retry_objs.size=" << retry_objs.size() << dendl;
       if (need_multiple_rounds() && !completed_objs.empty()) {
+	ldout(dout, 0) << "ERIC " << __func__ << " need_multiple_rounds is true" << dendl;
 	// For those objects which need another round, use them to reset
 	// the container
 	reset_container(completed_objs);
 	iter = objs_container.begin();
       } else if (! need_multiple_rounds() && !retry_objs.empty()) {
+	ldout(dout, 0) << "ERIC " << __func__ << " about to retry " << retry_objs.size() << " shards" << dendl;
 	reset_container(retry_objs);
 	iter = objs_container.begin();
       }
@@ -66,6 +75,7 @@ int CLSRGWConcurrentIO::operator()() {
       // if container was reset above
       if (iter != objs_container.end()) {
 	for (; num_completions && iter != objs_container.end(); --num_completions, ++iter) {
+	  ldout(dout, 0) << "ERIC " << __func__ << " bottom issue_op " << iter->first << " / " << iter->second << dendl;
 	  int issue_ret = issue_op(iter->first, iter->second);
 	  if (issue_ret < 0) {
 	    ret = issue_ret;
@@ -135,6 +145,7 @@ bool BucketIndexAioManager::wait_for_completions(CephContext* dout,
 						 std::map<int, std::string> *completed_objs,
 						 std::map<int, std::string> *retry_objs)
 {
+  ldout(dout, 0) << "ERIC " << __func__ << " entering" << dendl;
   std::unique_lock locker{lock};
   if (pendings.empty() && completions.empty()) {
     return false;
@@ -164,6 +175,7 @@ bool BucketIndexAioManager::wait_for_completions(CephContext* dout,
 	  r = 0;
 #endif
 	  if (retry_objs) {
+	    ldout(dout, 0) << "ERIC " << __func__ << " adding " << liter->first << " (" << liter->second << ") to retry_objs" << dendl;
 	    (*retry_objs)[liter->first] = liter->second;
 	  }
 	}
