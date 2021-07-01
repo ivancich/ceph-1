@@ -718,6 +718,7 @@ EOF
         ; needed for passing lc time based s3-tests (can be verbose)
         ; rgw lc debug interval = 10
         $(format_conf "${extra_conf}")
+        rgw dynamic resharding = false
 EOF
 	do_rgw_conf
 	wconf << EOF
