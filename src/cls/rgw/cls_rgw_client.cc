@@ -155,8 +155,14 @@ bool BucketIndexAioManager::wait_for_completions(int valid_ret_code,
 	  (*completed_objs)[liter->first] = liter->second;
 	}
 
-	if (r == -EAGAIN && retry_objs) {
-	  (*retry_objs)[liter->first] = liter->second;
+	if (r == RGWBucketListAdvanceRetryError) {
+#if 0
+	  // use???
+	  r = 0;
+#endif
+	  if (retry_objs) {
+	    (*retry_objs)[liter->first] = liter->second;
+	  }
 	}
       } else {
 	// NB: should we log an error here; currently no logging
@@ -337,9 +343,10 @@ static bool issue_bucket_list_op(librados::IoCtx& io_ctx,
 int CLSRGWIssueBucketList::issue_op(int shard_id, const string& oid)
 {
   // set the marker depending on whether we've already queried this
-  // shard and gotten a -EAGAIN return value; if we have use the
-  // marker in the return to advance the search, otherwise use the
-  // marker passed in by the caller
+  // shard and gotten a RGWBucketListAdvanceRetryError (defined
+  // constant) return value; if we have use the marker in the return
+  // to advance the search, otherwise use the marker passed in by the
+  // caller
   cls_rgw_obj_key marker;
   auto iter = result.find(shard_id);
   if (iter != result.end()) {
