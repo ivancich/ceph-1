@@ -23,6 +23,8 @@ const string BucketIndexShardsManager::SHARDS_SEPARATOR = ",";
 
 
 int CLSRGWConcurrentIO::operator()() {
+  CephContext* dout = (CephContext*)io_ctx.cct();
+
   int ret = 0;
   iter = objs_container.begin();
   for (; iter != objs_container.end() && max_aio-- > 0; ++iter) {
@@ -34,7 +36,7 @@ int CLSRGWConcurrentIO::operator()() {
   int num_completions = 0, r = 0;
   std::map<int, std::string> completed_objs;
   std::map<int, std::string> retry_objs;
-  while (manager.wait_for_completions(valid_ret_code(), &num_completions, &r,
+  while (manager.wait_for_completions(dout, valid_ret_code(), &num_completions, &r,
 				      need_multiple_rounds() ? &completed_objs : nullptr,
 				      !need_multiple_rounds() ? &retry_objs : nullptr)) {
     if (r >= 0 && ret >= 0) {
@@ -126,7 +128,8 @@ void BucketIndexAioManager::do_completion(int id) {
   cond.notify_all();
 }
 
-bool BucketIndexAioManager::wait_for_completions(int valid_ret_code,
+bool BucketIndexAioManager::wait_for_completions(CephContext* dout,
+						 int valid_ret_code,
 						 int *num_completions,
 						 int *ret_code,
 						 std::map<int, std::string> *completed_objs,
